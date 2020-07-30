@@ -1,0 +1,6 @@
+[submodule "erfa"]
+	path = erfa
+	url = https://github.com/liberfa/erfa.git
+[submodule "pal"]
+	path = pal
+	url = https://github.com/Starlink/pal.git

@@ -1,0 +1,124 @@
+
+CC = gcc
+COPT = -O2 -march=native -mtune=native
+CFLAGS += -Wall -Wextra -Wpedantic -Wunused -D_GNU_SOURCE
+
+ERFADIR = ../erfa
+
+PALLIB = pal.a
+PALVERSION = '0.9.9'
+PALVERSION_INTEGER = '090909'
+PALDEFS = -DPACKAGE_VERSION="\"0.9.9\"" -DPACKAGE_VERSION_INTEGER="99"
+PALDIR = .
+
+PALSRC = \
+	$(PALDIR)/palAddet.c \
+	$(PALDIR)/palAirmas.c \
+	$(PALDIR)/palAltaz.c \
+	$(PALDIR)/palAmp.c \
+	$(PALDIR)/palAmpqk.c \
+	$(PALDIR)/palAop.c \
+	$(PALDIR)/palAoppa.c \
+	$(PALDIR)/palAoppat.c \
+	$(PALDIR)/palAopqk.c \
+	$(PALDIR)/palAtmdsp.c \
+	$(PALDIR)/palCaldj.c \
+	$(PALDIR)/palDafin.c \
+	$(PALDIR)/palDcmpf.c \
+	$(PALDIR)/palDe2h.c \
+	$(PALDIR)/palDeuler.c \
+	$(PALDIR)/palDfltin.c \
+	$(PALDIR)/palDh2e.c \
+	$(PALDIR)/palDjcal.c \
+	$(PALDIR)/palDmat.c \
+	$(PALDIR)/palDs2tp.c \
+	$(PALDIR)/palDat.c \
+	$(PALDIR)/palDmoon.c \
+	$(PALDIR)/palDrange.c \
+	$(PALDIR)/palDt.c \
+	$(PALDIR)/palDtp2s.c \
+	$(PALDIR)/palDtps2c.c \
+	$(PALDIR)/palDtt.c \
+	$(PALDIR)/palEcleq.c \
+	$(PALDIR)/palEcmat.c \
+	$(PALDIR)/palEl2ue.c \
+	$(PALDIR)/palEpco.c \
+	$(PALDIR)/palEpv.c \
+	$(PALDIR)/palEtrms.c \
+	$(PALDIR)/palEqecl.c \
+	$(PALDIR)/palEqgal.c \
+	$(PALDIR)/palEvp.c \
+	$(PALDIR)/palFitxy.c \
+	$(PALDIR)/palFk45z.c \
+	$(PALDIR)/palFk524.c \
+	$(PALDIR)/palFk54z.c \
+	$(PALDIR)/palGaleq.c \
+	$(PALDIR)/palGalsup.c \
+	$(PALDIR)/palGe50.c \
+	$(PALDIR)/palGeoc.c \
+	$(PALDIR)/palIntin.c \
+	$(PALDIR)/palInvf.c \
+	$(PALDIR)/palMap.c \
+	$(PALDIR)/palMappa.c \
+	$(PALDIR)/palMapqk.c \
+	$(PALDIR)/palMapqkz.c \
+	$(PALDIR)/palNut.c \
+	$(PALDIR)/palNutc.c \
+	$(PALDIR)/palOap.c \
+	$(PALDIR)/palOapqk.c \
+	$(PALDIR)/palObs.c \
+	$(PALDIR)/palOne2One.c \
+	$(PALDIR)/palPa.c \
+	$(PALDIR)/palPcd.c \
+	$(PALDIR)/palPertel.c \
+	$(PALDIR)/palPertue.c \
+	$(PALDIR)/palPlanel.c \
+	$(PALDIR)/palPlanet.c \
+	$(PALDIR)/palPlante.c \
+	$(PALDIR)/palPlantu.c \
+	$(PALDIR)/palPm.c \
+	$(PALDIR)/palPolmo.c \
+	$(PALDIR)/palPrebn.c \
+	$(PALDIR)/palPrec.c \
+	$(PALDIR)/palPreces.c \
+	$(PALDIR)/palPrenut.c \
+	$(PALDIR)/palPv2el.c \
+	$(PALDIR)/palPv2ue.c \
+	$(PALDIR)/palPvobs.c \
+	$(PALDIR)/palPxy.c \
+	$(PALDIR)/palRanorm.c \
+	$(PALDIR)/palRdplan.c \
+	$(PALDIR)/palRefco.c \
+	$(PALDIR)/palRefro.c \
+	$(PALDIR)/palRefv.c \
+	$(PALDIR)/palRefz.c \
+	$(PALDIR)/palRverot.c \
+	$(PALDIR)/palRvgalc.c \
+	$(PALDIR)/palRvlg.c \
+	$(PALDIR)/palRvlsrd.c \
+	$(PALDIR)/palRvlsrk.c \
+	$(PALDIR)/palSubet.c \
+	$(PALDIR)/palSupgal.c \
+	$(PALDIR)/palUe2el.c \
+	$(PALDIR)/palUe2pv.c \
+	$(PALDIR)/palUnpcd.c \
+	$(PALDIR)/palVers.c \
+	$(PALDIR)/palXy2xy.c \
+	$(PALDIR)/pal1Atms.c \
+	$(PALDIR)/pal1Atmt.c
+
+PALOBJ = ${PALSRC:.c=.o}
+
+
+all: ${PALLIB}
+
+${PALLIB}: ${PALOBJ}
+	@echo "  AR     "$@
+	@ar rcs $@ ${PALOBJ} ${ERFADIR}/src/.libs/liberfa.a
+
+%.o: %.c
+	@echo "  CC     "$<
+	@${CC} ${COPT} ${CFLAGS} ${PALDEFS} -I ${ERFADIR}/src/ -c -o $@ $<
+
+clean:
+	@rm -rf ${PALLIB} ${PALOBJ}

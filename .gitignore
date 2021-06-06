@@ -1,2 +1,4 @@
+*.swp
+*~
+*.o
 astro_predict
-main.o

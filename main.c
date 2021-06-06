@@ -6,11 +6,16 @@
 #include <math.h>
 
 #include "pal/pal.h"
+#include "stars.h"
 
+// Vernon Way
 #define STATION_LATITUDE_DEG    51.25
 #define STATION_LONGITUDE_DEG   (-0.6)
+#define STATION_ALTITUDE_M   (100)
 
 #define SIDEREAL_DAY_HOURS  24.0 // SOLAR DAY: 23.9344696
+// Note that the seconds here are sidereal rather than SI.  One
+//  sidereal second is about 0.99727 SI seconds.
 
 #define RAD2DEG(x)  (((x) * 180.0) / M_PI)
 #define DEG2RAD(x)  (((x) / 180.0) * M_PI)
@@ -19,6 +24,13 @@
 #define HR2RAD(x)   (((x) / SIDEREAL_DAY_HOURS) * (2 * M_PI))
 
 #define DEG2HR(x)   (((x) / 360.0) * SIDEREAL_DAY_HOURS)
+
+#define MAS2RAD(x)  ((x) * 4.8481368110954E-9)
+
+// https://hpiers.obspm.fr/eop-pc/index.php
+#define POLAR_X_MAS     (124.53)
+#define POLAR_Y_MAS     (445.24)
+#define DELTA_UT_MS     (-182.909)
 
 uint64_t timestamp_ms(void)
 {
@@ -32,32 +44,6 @@ uint64_t timestamp_ms(void)
     return ((uint64_t)tp.tv_sec * 1000) + (tp.tv_nsec / (1000*1000));
 }
 
-double unixMsTolocalSiderealTime(double modified_julian_date, double station_longitude_deg)
-{
-    double greenwich_mean_sidereal_time = RAD2HR(palGmst(modified_julian_date));
-
-    printf("GMST: %.2fh (%dm %.1fs)\r\n",
-        greenwich_mean_sidereal_time,
-        (uint32_t)(60*(greenwich_mean_sidereal_time - floor(greenwich_mean_sidereal_time))),
-        60*((60*greenwich_mean_sidereal_time) - floor((60*greenwich_mean_sidereal_time)))
-    );
-
-    double lst_hours = greenwich_mean_sidereal_time + DEG2HR(station_longitude_deg);
-
-    if(lst_hours > 24.0)
-    {
-        lst_hours = lst_hours - 24.0;
-    }
-    else if(lst_hours < 0.0)
-    {
-        lst_hours = lst_hours + 24.0;
-    }
-
-    printf("LST: %.2fh\r\n", lst_hours);
-
-    return lst_hours;
-}
-
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -65,33 +51,110 @@ int main(int argc, char **argv)
 
     printf("== astro_predict ==\r\n");
 
-    double modified_julian_date = (( ((double)timestamp_ms()) / 86400000.0 ) + 40587.0); // MJD = (JD - 2400000.5)
-    printf("MJD: %.5f\r\n", modified_julian_date);
+    /* Antenna Location */
+    double antenna_latitude_rad = DEG2RAD(STATION_LATITUDE_DEG);
+    double antenna_longitude_rad = DEG2RAD(STATION_LONGITUDE_DEG);
 
-    double ra_hours;
-    double dec_deg;
+#if 0
+    /* Polar Motion - Overkill (typically a few meters and ~0.2 millidegrees azimuth) */
+    double antenna_azimuth_polar_correction_rad = 0.0;
+    palPolmo(
+        antenna_longitude_rad, antenna_latitude_rad,
+        MAS2RAD(POLAR_X_MAS), MAS2RAD(POLAR_Y_MAS),
+        &antenna_longitude_rad, &antenna_latitude_rad,
+        &antenna_azimuth_polar_correction_rad
+    );
+#endif
 
-    double local_sidereal_hours = unixMsTolocalSiderealTime(modified_julian_date, STATION_LONGITUDE_DEG);
+    printf("Antenna:\n");
+    printf(" - Latitude:  %.05f°\n", RAD2DEG(antenna_latitude_rad));
+    printf(" - Longitude: %.05f°\n", RAD2DEG(antenna_longitude_rad));
 
-    //double hour_angle = local_sidereal_hours - ra_hours;
+    /* Timestamps */
+    printf("Timing:\n");
 
-    double azimuth, elevation;
+    double utc = ((double)timestamp_ms() / 1000.0);
+    double ut1 = utc + (DELTA_UT_MS / 1000.0);
 
-    /** Mars (JPL Horizons - 29th Jul 2020) **/
-    ra_hours  =  1. + 9./60. + 28.82/3600.;
-    dec_deg   =  3. + 16./60. + 28.9/3600.;
+    double modified_julian_date = (( ut1 / 86400.0 ) + 40587.0); // MJD = (JD - 2400000.5)
 
-    // Mean Place -> geocentric apparent: palMap ( double rm, double dm, double pr, double pd, double px, double rv, double eq, double date, double ∗ra, double ∗da ); 
+    printf(" - MJD: %.5f\r\n", modified_julian_date); // Can be checked on https://planetcalc.com/503/ (note UTC/Local TZ)
 
-    //Apparent (mass center) -> Observed (with refraction): palAop ( double rap, double dap, double date, double dut, double elongm, double phim, double hm, double xp, double yp, double tdk, double pmb, double rh, double wl, double tlr, double ∗aob, double ∗zob, double ∗hob, double ∗dob, double ∗rob ); 
+    double greenwich_mean_sidereal_time_hours = RAD2HR(palGmst(modified_julian_date));
 
-    // palDe2h() Convert equatorial to horizon coordinates.
-    palDe2h(
-        HR2RAD(local_sidereal_hours - ra_hours), DEG2RAD(dec_deg), DEG2RAD(STATION_LATITUDE_DEG),
-        &azimuth, &elevation
+    printf(" - GMST: %.4fh (%dh %dm %.1fs)\r\n",
+        greenwich_mean_sidereal_time_hours,
+        (uint32_t)(floor(greenwich_mean_sidereal_time_hours)),
+        (uint32_t)(60*(greenwich_mean_sidereal_time_hours - floor(greenwich_mean_sidereal_time_hours))),
+        60*((60*greenwich_mean_sidereal_time_hours) - floor((60*greenwich_mean_sidereal_time_hours)))
     );
 
-    printf("MARS:        Az: %.2f°, El: %.2f°\r\n", RAD2DEG(azimuth), RAD2DEG(elevation));
+    double local_mean_sidereal_time_hours = greenwich_mean_sidereal_time_hours + RAD2HR(antenna_longitude_rad);
+    if(local_mean_sidereal_time_hours > 24.0) local_mean_sidereal_time_hours -= 24.0;
+    if(local_mean_sidereal_time_hours < 0.0) local_mean_sidereal_time_hours += 24.0;
+
+    printf(" - LMST: %.4fh (%dh %dm %.1fs)\r\n",
+        local_mean_sidereal_time_hours,
+        (uint32_t)(floor(local_mean_sidereal_time_hours)),
+        (uint32_t)(60*(local_mean_sidereal_time_hours - floor(local_mean_sidereal_time_hours))),
+        60*((60*local_mean_sidereal_time_hours) - floor((60*local_mean_sidereal_time_hours)))
+    );
+
+    /* Mean Place to Apparent Place
+        - Light deflection
+        - Annual Aberration
+        - Precession-Nutation
+    */
+    double out_ra_rad, out_dec_rad;
+
+    palMap(
+        radiostar_taua.mean_ra_rad,
+        radiostar_taua.mean_dec_rad,
+        radiostar_taua.pm_ra_rad_per_year,
+        radiostar_taua.pm_dec_rad_per_year,
+        radiostar_taua.parallax_arcsec,
+        radiostar_taua.radial_vel_kmpersec,
+        radiostar_taua.epoch_equinox_julian,
+        modified_julian_date,
+        &out_ra_rad, &out_dec_rad
+    );
+
+    printf("palMap:\n");
+    printf(" - Before: RA %.4f, DEC: %.4f\n", radiostar_taua.mean_ra_rad, radiostar_taua.mean_dec_rad);
+    printf(" - After:  RA %.4f, DEC: %.4f\n", out_ra_rad, out_dec_rad);
+
+    /* Apparent Place to Observed Place */
+
+    double ambient_temperature_kelvin = ((15.5)+273.15);
+    double ambient_pressure_mb = (998.6);
+    double ambient_humidity_normalised = (0.9);
+    double ambient_lapserate_kpermeter = (0.00649); // (ICAO is 0.00649 K/m)
+
+    double rf_wavelength_microns = (40.0*1000); // Set for approx 7.5GHz RF (40mm)
+
+    double aop_az_rad, aop_zen_rad, ha_rad, dec_rad, ra_rad;
+    palAop(
+        out_ra_rad, // Right Ascension (Radians)
+        out_dec_rad, // Declination (Radians)
+        modified_julian_date,
+        (DELTA_UT_MS / 1000.0),
+        antenna_longitude_rad, antenna_latitude_rad, STATION_ALTITUDE_M,
+        MAS2RAD(POLAR_X_MAS), MAS2RAD(POLAR_Y_MAS), // Polar Motion (radians)
+        ambient_temperature_kelvin, // Ambient Temperature (K)
+        ambient_pressure_mb, // Ambient Pressure (mB)
+        ambient_humidity_normalised, // Relative Humidity (normalised)
+        rf_wavelength_microns, // Wavelength (micron)
+        ambient_lapserate_kpermeter, // Tropospheric lapse rate (K/metre)
+        &aop_az_rad, &aop_zen_rad, &ha_rad,
+        &dec_rad, &ra_rad
+    );
+
+    /* Negative Azimuth */
+    if(aop_az_rad < 0) { aop_az_rad += 2*M_PI; }
+
+    printf("RA/DEC -> Az: %.3f°, El: %.3f°\r\n", RAD2DEG(aop_az_rad), 90.0-RAD2DEG(aop_zen_rad));
+
+    printf("**** MARS ****\n");
 
     // palRdplan()  Approximate topocentric apparent RA,Dec of a planet, and its angular diameter.
     // 1 = Mercury 2 = Venus 3 = Moon 4 = Mars 5 = Jupiter 6 = Saturn 7 = Uranus 8 = Neptune
@@ -101,30 +164,26 @@ int main(int argc, char **argv)
         &calc_ra, &calc_dec, &calc_dia
     );
 
-    // palDe2h() Convert equatorial to horizon coordinates.
-    palDe2h(
-        HR2RAD(local_sidereal_hours - RAD2HR(calc_ra)), calc_dec, DEG2RAD(STATION_LATITUDE_DEG),
-        &azimuth, &elevation
+    palAop(
+        calc_ra, // Right Ascension (Radians)
+        calc_dec, // Declination (Radians)
+        modified_julian_date,
+        (DELTA_UT_MS / 1000.0),
+        antenna_longitude_rad, antenna_latitude_rad, STATION_ALTITUDE_M,
+        MAS2RAD(POLAR_X_MAS), MAS2RAD(POLAR_Y_MAS), // Polar Motion (radians)
+        ambient_temperature_kelvin, // Ambient Temperature (K)
+        ambient_pressure_mb, // Ambient Pressure (mB)
+        ambient_humidity_normalised, // Relative Humidity (normalised)
+        rf_wavelength_microns, // Wavelength (micron)
+        ambient_lapserate_kpermeter, // Tropospheric lapse rate (K/metre)
+        &aop_az_rad, &aop_zen_rad, &ha_rad,
+        &dec_rad, &ra_rad
     );
 
-    printf("MARS (calc): Az: %.2f°, El: %.2f°\r\n", RAD2DEG(azimuth), RAD2DEG(elevation));
+    /* Negative Azimuth */
+    if(aop_az_rad < 0) { aop_az_rad += 2*M_PI; }
 
-
-    // Geocentric Apparent (mass center) -> Observed (with refraction): palAop ( double rap, double dap, double date, double dut, double elongm, double phim, double hm, double xp, double yp, double tdk, double pmb, double rh, double wl, double tlr, double ∗aob, double ∗zob, double ∗hob, double ∗dob, double ∗rob ); 
-    // WARNING: geocentric / topocentric 
-
-    /** Tianwen-1 (28th Jul 2020) **/
-
-    ra_hours  = 18. + 36./60. + 56.3/3600.;
-    dec_deg   = 38. + 47./60. + 01./3600.;
-
-    palDe2h(
-        (local_sidereal_hours - ra_hours), DEG2RAD(dec_deg), DEG2RAD(STATION_LATITUDE_DEG),
-        &azimuth, &elevation
-    );
-
-    printf("Tianwen-1: Az: %.1f°, El: %.1f°\r\n", RAD2DEG(azimuth), RAD2DEG(elevation));
-
+    printf("MARS palAop:         Az: %.3f°, El: %.3f°\r\n", RAD2DEG(aop_az_rad), 90.0-RAD2DEG(aop_zen_rad));
 
     return 0;
 }

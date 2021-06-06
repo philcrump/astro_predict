@@ -5,15 +5,15 @@ CFLAGS += -Wall -Wextra -Wpedantic -Wunused -D_GNU_SOURCE
 
 BIN = astro_predict
 
-SRC = \
-	main.c
+SRC = main.c \
+	stars.c
 
 OBJ = ${SRC:.c=.o}
 
-PALDIR = pal
+PALDIR = pal/
 PALLIB = pal.a
 
-ERFADIR = erfa
+ERFADIR = erfa/
 ERFALIB = liberfa.a
 
 LDFLAGS += -L${PALDIR} -l:${PALLIB} -L${ERFADIR}/src/.libs/ -l:${ERFALIB} -lm
@@ -36,7 +36,7 @@ $(BIN): ${OBJ}
 	@${CC} ${COPT} ${CFLAGS} -c -fPIC -o $@ $<
 
 clean:
-	@rm -rf ${BIN} fake_read ${OBJ}
+	@rm -rf ${BIN} ${OBJ}
 
 check-gitsubmodules:
 	@if git submodule status | egrep -q '^[-]|^[+]' ; then \

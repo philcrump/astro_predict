@@ -6,6 +6,7 @@ CFLAGS += -Wall -Wextra -Wpedantic -Wunused -D_GNU_SOURCE
 BIN = astro_predict
 
 SRC = main.c \
+	lunarRdPlan.c \
 	stars.c
 
 OBJ = ${SRC:.c=.o}
@@ -16,7 +17,10 @@ PALLIB = pal.a
 ERFADIR = erfa/
 ERFALIB = liberfa.a
 
-LDFLAGS += -L${PALDIR} -l:${PALLIB} -L${ERFADIR}/src/.libs/ -l:${ERFALIB} -lm
+LUNARDIR = lunar/
+LUNARLIB = liblunar.a
+
+LDFLAGS += -L${PALDIR} -l:${PALLIB} -L${ERFADIR}/src/.libs/ -l:${ERFALIB} -L${LUNARDIR} -l:${LUNARLIB} -lm
 
 all: check-gitsubmodules ${BIN}
 

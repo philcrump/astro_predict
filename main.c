@@ -7,6 +7,11 @@
 
 #include "pal/pal.h"
 #include "stars.h"
+#include "lunarRdPlan.h"
+
+#define KMINAU 1.49597870e8
+
+#define VACLIGHTSPEED_KMPS  299792.458 // km/s
 
 // Vernon Way
 #define STATION_LATITUDE_DEG    51.25
@@ -183,7 +188,36 @@ int main(int argc, char **argv)
     /* Negative Azimuth */
     if(aop_az_rad < 0) { aop_az_rad += 2*M_PI; }
 
-    printf("MARS palAop:         Az: %.3f°, El: %.3f°\r\n", RAD2DEG(aop_az_rad), 90.0-RAD2DEG(aop_zen_rad));
+    printf("MARS RdPlan:     Az: %.3f°, El: %.3f°\r\n", RAD2DEG(aop_az_rad), 90.0-RAD2DEG(aop_zen_rad));
+
+    double mars_range, mars_rangerate;
+    lunarRdplan(
+        modified_julian_date, 4, DEG2RAD(STATION_LONGITUDE_DEG), DEG2RAD(STATION_LATITUDE_DEG),
+        &calc_ra, &calc_dec, &mars_range, &mars_rangerate
+    );
+
+    palAop(
+        calc_ra, // Right Ascension (Radians)
+        calc_dec, // Declination (Radians)
+        modified_julian_date,
+        (DELTA_UT_MS / 1000.0),
+        antenna_longitude_rad, antenna_latitude_rad, STATION_ALTITUDE_M,
+        MAS2RAD(POLAR_X_MAS), MAS2RAD(POLAR_Y_MAS), // Polar Motion (radians)
+        ambient_temperature_kelvin, // Ambient Temperature (K)
+        ambient_pressure_mb, // Ambient Pressure (mB)
+        ambient_humidity_normalised, // Relative Humidity (normalised)
+        rf_wavelength_microns, // Wavelength (micron)
+        ambient_lapserate_kpermeter, // Tropospheric lapse rate (K/metre)
+        &aop_az_rad, &aop_zen_rad, &ha_rad,
+        &dec_rad, &ra_rad
+    );
+
+    /* Negative Azimuth */
+    if(aop_az_rad < 0) { aop_az_rad += 2*M_PI; }
+
+    printf("MARS PS_1996:    Az: %.3f°, El: %.3f°\r\n", RAD2DEG(aop_az_rad), 90.0-RAD2DEG(aop_zen_rad));
+    printf("  Range:  %.3f AU, Range-Rate: %.3f km/s (rate could be negative)\n", mars_range, mars_rangerate * KMINAU);
+    printf("  Doppler at 8.45GHz: %.1fHz\n", -0.5 * 8.45e9 * ((mars_rangerate * KMINAU) / VACLIGHTSPEED_KMPS));
 
     return 0;
 }

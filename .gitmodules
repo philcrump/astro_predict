@@ -4,3 +4,6 @@
 [submodule "pal"]
 	path = pal
 	url = https://github.com/Starlink/pal.git
+[submodule "lunar"]
+	path = lunar
+	url = https://github.com/Bill-Gray/lunar.git

@@ -20,4 +20,9 @@ cd pal/
 make -j
 ```
 
+## Lunar
 
+```
+cd lunar
+make -j
+```

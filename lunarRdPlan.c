@@ -166,5 +166,12 @@ void lunarRdplan( double date, int np, double elong, double phi,
   *ra = eraAnp( *ra );
 
   *range = r;
-  *range_rate = sqrt( v[3]*v[3] + v[4]*v[4] + v[5]*v[5] );
+
+  /* Propagate position forwards 1 second */
+  dx += v[3];
+  dy += v[4];
+  dz += v[5];
+
+  /* Difference in range to give range-rate */
+  *range_rate = sqrt( dx*dx + dy*dy + dz*dz ) - r;
 }

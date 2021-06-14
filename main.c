@@ -216,8 +216,8 @@ int main(int argc, char **argv)
     if(aop_az_rad < 0) { aop_az_rad += 2*M_PI; }
 
     printf("MARS PS_1996:    Az: %.3f°, El: %.3f°\r\n", RAD2DEG(aop_az_rad), 90.0-RAD2DEG(aop_zen_rad));
-    printf("  Range:  %.3f AU, Range-Rate: %.3f km/s (rate could be negative)\n", mars_range, mars_rangerate * KMINAU);
-    printf("  Doppler at 8.45GHz: %.1fHz\n", -0.5 * 8.45e9 * ((mars_rangerate * KMINAU) / VACLIGHTSPEED_KMPS));
+    printf("  Range:  %.0f km, Range-Rate: %+.3f km/s\n", mars_range * KMINAU, mars_rangerate * KMINAU);
+    printf("  Doppler at 8.45GHz: %+.1fHz\n", -1.0 * 8.45e9 * ((mars_rangerate * KMINAU) / VACLIGHTSPEED_KMPS));
 
     return 0;
 }

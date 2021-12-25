@@ -169,6 +169,10 @@ int main(int argc, char **argv)
         &calc_ra, &calc_dec, &calc_dia
     );
 
+    double de2h_az, de2h_el;
+    palDe2h(HR2RAD(local_mean_sidereal_time_hours) - calc_ra, calc_dec, DEG2RAD(STATION_LATITUDE_DEG), &de2h_az, &de2h_el); 
+    printf("MARS RdPlanDe2h: Az: %.3f°, El: %.3f°\r\n", RAD2DEG(de2h_az), RAD2DEG(de2h_el));
+
     palAop(
         calc_ra, // Right Ascension (Radians)
         calc_dec, // Declination (Radians)
